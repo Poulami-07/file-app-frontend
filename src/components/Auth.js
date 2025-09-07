@@ -1,27 +1,29 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
-import "../App.css"
+import "../App.css";
+
 export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false); // 👈 New state
 
+  // Normal SignIn / SignUp
   const handleAuth = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       if (isSignUp) {
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            data: {
-              full_name: fullName,
-            }
-          }
+            data: { full_name: fullName },
+          },
         });
         if (error) throw error;
         alert('Check your email for the confirmation link!');
@@ -36,87 +38,173 @@ export default function Auth() {
     }
   };
 
+  // Forgot Password
+
+const handleForgotPassword = async () => {
+  if (!email) {
+    alert("Please enter your email.");
+    return;
+  }
+
+  try {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: "http://localhost:3000/reset-password",
+    });
+
+    if (error) {
+      console.error("Supabase error:", error);
+      alert("Error: " + error.message);
+    } else {
+      console.log("Supabase response:", data);
+      alert("Password reset link sent! Check your inbox.");
+    }
+  } catch (err) {
+    console.error("Network/Fetch error:", err);
+    alert("Network error: " + err.message);
+  }
+};
+
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            {isSignUp ? 'Create your account' : 'Sign in to your account'}
+            {isForgotPassword
+              ? "Reset your password"
+              : isSignUp
+              ? "Create your account"
+              : "Sign in to your account"}
           </h2>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleAuth}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            {isSignUp && (
-              <div>
-                <label htmlFor="full-name" className="sr-only">
-                  Full Name
-                </label>
-                <input
-                  id="full-name"
-                  name="name"
-                  type="text"
-                  required
-                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                  placeholder="Full Name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                />
-              </div>
-            )}
+
+        {/* Forgot Password Form */}
+        {isForgotPassword ? (
+          <form className="mt-8 space-y-6" onSubmit={handleForgotPassword}>
             <div>
-              <label htmlFor="email-address" className="sr-only">
-                Email address
-              </label>
               <input
-                id="email-address"
-                name="email"
+                id="email"
                 type="email"
-                autoComplete="email"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
+                className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md
+                placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 
+                focus:border-indigo-500 sm:text-sm"
+                placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div>
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+              className="w-full py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 
+              disabled:opacity-50"
             >
-              {loading ? 'Loading...' : isSignUp ? 'Sign up' : 'Sign in'}
+              {loading ? "Sending..." : "Send Reset Link"}
             </button>
-          </div>
+            <div className="text-center">
+              <button
+                type="button"
+                className="text-indigo-600 hover:text-indigo-500 text-sm"
+                onClick={() => setIsForgotPassword(false)}
+              >
+                Back to Sign in
+              </button>
+            </div>
+          </form>
+        ) : (
+          // Normal SignIn/SignUp Form
+          <form className="mt-8 space-y-6" onSubmit={handleAuth}>
+            <div className="rounded-md shadow-sm -space-y-px">
+              {isSignUp && (
+                <div>
+                  <input
+                    id="full-name"
+                    name="name"
+                    type="text"
+                    required
+                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-t-md
+                    placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 
+                    focus:border-indigo-500 sm:text-sm"
+                    placeholder="Full Name"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                  />
+                </div>
+              )}
 
-          <div className="text-center">
+              <div>
+                <input
+                  id="email-address"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 
+                  placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 
+                  focus:border-indigo-500 sm:text-sm"
+                  placeholder="Email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  required
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-b-md
+                  placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 
+                  focus:border-indigo-500 sm:text-sm"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 px-3 flex items-center text-sm text-gray-600 hover:text-indigo-600"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+            </div>
+
             <button
-              type="button"
-              className="text-indigo-600 hover:text-indigo-500 text-sm"
-              onClick={() => setIsSignUp(!isSignUp)}
+              type="submit"
+              disabled={loading}
+              className="w-full py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 
+              disabled:opacity-50"
             >
-              {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+              {loading ? "Loading..." : isSignUp ? "Sign up" : "Sign in"}
             </button>
-          </div>
-        </form>
+
+            {/* Forgot Password Button */}
+            {!isSignUp && (
+              <div className="text-center">
+                <button
+                  type="button"
+                  className="text-sm text-red-500 hover:text-red-600"
+                  onClick={() => setIsForgotPassword(true)}
+                >
+                  Forgot your password?
+                </button>
+              </div>
+            )}
+
+            <div className="text-center">
+              <button
+                type="button"
+                className="text-indigo-600 hover:text-indigo-500 text-sm"
+                onClick={() => setIsSignUp(!isSignUp)}
+              >
+                {isSignUp
+                  ? "Already have an account? Sign in"
+                  : "Don't have an account? Sign up"}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
